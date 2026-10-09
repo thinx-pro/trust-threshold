@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>trust-threshold</title>
+<meta name="description" content="Paste model confidences and outcomes. Get the confidence threshold that meets your target accuracy, how much traffic it can auto-handle, calibration error, and a split-half check. Runs in your browser.">
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --ink: #1d1f23; --muted: #646a73; --line: #e2e3e0; --soft: #f0f1ee;
+  --accent: #2f6fdf; --good: #1f8a4c; --warn: #b26b00; --bad: #c43d3d;
+  --s1: #2f6fdf; --s2: #d0612a; --s3: #1f8a4c; --s4: #8a4fd0; --grid: #e7e8e4;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111317; --panel: #181b20; --ink: #e7e9ec; --muted: #9aa1ab; --line: #2a2e35; --soft: #20242a;
+    --accent: #6ea0ff; --good: #4cc27f; --warn: #e3a73a; --bad: #ef6b6b;
+    --s1: #6ea0ff; --s2: #f08a54; --s3: #4cc27f; --s4: #b58cff; --grid: #252a31;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111317; --panel: #181b20; --ink: #e7e9ec; --muted: #9aa1ab; --line: #2a2e35; --soft: #20242a;
+  --accent: #6ea0ff; --good: #4cc27f; --warn: #e3a73a; --bad: #ef6b6b;
+  --s1: #6ea0ff; --s2: #f08a54; --s3: #4cc27f; --s4: #b58cff; --grid: #252a31;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 28px 16px 48px; }
+header h1 { margin: 0; font-size: 26px; letter-spacing: -0.01em; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 760px; }
+.grid { display: grid; grid-template-columns: 360px 1fr; gap: 16px; margin-top: 20px; align-items: start; }
+@media (max-width: 880px) { .grid { grid-template-columns: 1fr; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.card h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+textarea { width: 100%; min-height: 170px; resize: vertical; font: 12.5px/1.45 var(--mono); color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+button, .file { font: inherit; font-size: 13.5px; border: 1px solid var(--line); background: var(--soft); color: var(--ink); border-radius: 7px; padding: 6px 11px; cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:hover, .file:hover { border-color: var(--accent); }
+.file input { display: none; }
+.hint { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+.err { color: var(--bad); font-size: 13px; margin-top: 8px; }
+label.ctl { display: block; margin-top: 14px; font-size: 13.5px; }
+.ctlrow { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+input[type=range] { flex: 1; accent-color: var(--accent); }
+input[type=number], select { font: inherit; font-size: 13.5px; width: 84px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--soft); color: var(--ink); }
+.big { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.model { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--panel); }
+.model .name { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.headline { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+.sub { color: var(--muted); font-size: 13px; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; margin-top: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.kv span:nth-child(odd) { color: var(--muted); }
+.flag { font-size: 12.5px; margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: var(--soft); }
+.flag.warn { color: var(--warn); } .flag.good { color: var(--good); }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+@media (max-width: 720px) { .charts { grid-template-columns: 1fr; } }
+svg { width: 100%; height: auto; display: block; }
+svg text { fill: var(--muted); font-size: 11px; font-family: system-ui, sans-serif; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.empty { color: var(--muted); padding: 40px 0; text-align: center; }
+footer { margin-top: 28px; color: var(--muted); font-size: 12.5px; }
+footer a, header a { color: var(--accent); }
+code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>trust-threshold</h1>
+    <p>How much can your model decide on its own? Paste its confidences and whether each answer was right. You get the threshold that meets your target accuracy, the share of traffic that clears it, and a split-half check of whether that number holds up.</p>
+  </header>
+
+  <div class="grid">
+    <section class="card" aria-label="Input">
+      <h2>Data</h2>
+      <textarea id="input" spellcheck="false" placeholder="confidence,correct&#10;0.97,1&#10;0.62,0&#10;…&#10;&#10;CSV, TSV, JSON array or JSONL. Optional model column to compare models. Or use prediction + label columns instead of correct."></textarea>
+      <div class="row">
+        <button id="example" class="primary" type="button">Load example</button>
+        <label class="file">Open file<input id="file" type="file" accept=".csv,.tsv,.txt,.json,.jsonl"></label>
+        <button id="clear" type="button">Clear</button>
+      </div>
+      <div id="mapping" class="hint">The example is synthetic: one calibrated model and one overconfident model.</div>
+      <div id="error" class="err" role="alert"></div>
+
+      <label class="ctl" for="target">Target accuracy on auto-handled items</label>
+      <div class="ctlrow">
+        <input id="target" type="range" min="80" max="99.9" step="0.1" value="95">
+        <input id="targetNum" type="number" min="50" max="99.99" step="0.1" value="95" aria-label="Target accuracy percent"> %
+      </div>
+      <label class="ctl" for="bins">Calibration bins</label>
+      <div class="ctlrow">
+        <select id="bins"><option>5</option><option selected>10</option><option>15</option><option>20</option></select>
+        <label style="display:flex;gap:6px;align-items:center;font-size:13.5px"><input id="conservative" type="checkbox"> conservative (95% lower bound)</label>
+      </div>
+      <div class="row"><button id="copy" type="button">Copy Markdown summary</button><span id="copied" class="hint" style="margin:0"></span></div>
+      <p class="hint">Everything runs in this tab. Nothing is uploaded.</p>
+    </section>
+
+    <section aria-label="Results">
+      <div id="cards" class="big"><div class="card empty">Paste data or load the example.</div></div>
+      <div class="charts">
+        <div class="card"><h2>Accuracy vs. coverage</h2><div id="curve"></div><div class="legend" id="legend1"></div></div>
+        <div class="card"><h2>Reliability (said vs. was right)</h2><div id="rel"></div><div class="legend" id="legend2"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Threshold = the lowest confidence where items at or above it are right at least the target share of the time. The split-half check picks the threshold on a random half and measures it on the other half.
+    · <a href="https://github.com/thinx-pro/trust-threshold">Source &amp; docs</a> · MIT
+  </footer>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

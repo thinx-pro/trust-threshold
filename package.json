@@ -1,0 +1,12 @@
+{
+  "name": "trust-threshold",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Find the confidence threshold that meets your target accuracy, and how much traffic it can auto-handle. Single static page.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/calib.test.js",
+    "serve": "python3 -m http.server 8765"
+  },
+  "license": "MIT"
+}
