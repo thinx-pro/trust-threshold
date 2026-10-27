@@ -75,9 +75,3 @@ All logic lives in [`calib.js`](calib.js) (pure functions, no DOM). [`app.js`](a
 MIT
 
 If this saved you a spreadsheet, a ⭐ helps others find it.
-
----
-
-### 中文说明
-
-**trust-threshold**：一个单页网页工具，回答「模型能自己拍板多少」。粘贴每条样本的置信度和是否正确（或者预测和标签两列），就能看到满足目标准确率（例如 95%）的最低置信度阈值、能自动处理的流量占比，以及校准误差（ECE / MCE）、Brier、AUROC、准确率–覆盖率曲线和可靠性图。重点是「对半验证」：在一半数据上选阈值，在另一半上检验，避免「阈值在评测集上调出来」的自我美化。可选保守模式（用 95% Wilson 下界）。数据只在浏览器里处理，不会上传。打开 https://thinx-pro.github.io/trust-threshold/ 即可使用。
